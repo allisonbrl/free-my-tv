@@ -342,13 +342,21 @@ var Data = (function () {
 
   var installed = [];   // the TV's apps, from TV.apps()
 
-  /** A service whose app is on the TV and that the person hasn't switched off in Home Settings (Picks from). */
-  function usable(key) { return !!appFor(key) && !Prefs.serviceOff(key); }
+  /** A service whose app is on the TV and that the person hasn't switched off in Home Settings (Picks from). With
+   *  open_in_stremio and Stremio on the TV, every known service counts: the picks open in Stremio instead. */
+  function usable(key) { return (!!appFor(key) || !!stremio()) && !Prefs.serviceOff(key); }
+
+  /** Stremio's app when open_in_stremio is set and it's on the TV, or null. */
+  function stremio() {
+    if (!CONFIG.openInStremio) return null;
+    for (var i = 0; i < installed.length; i++) if (/stremio/i.test(installed[i].id) || /^stremio\b/i.test(installed[i].title)) return installed[i];
+    return null;
+  }
 
   /** The streaming services whose app is on this TV, as {key, name}, for Home Settings. */
   function services() {
     var out = [];
-    for (var s = 0; s < SERVICES.length; s++) if (appFor(SERVICES[s][1])) out.push({key: SERVICES[s][1], name: SERVICES[s][4]});
+    for (var s = 0; s < SERVICES.length; s++) if (appFor(SERVICES[s][1]) || stremio()) out.push({key: SERVICES[s][1], name: SERVICES[s][4]});
     return out;
   }
 
@@ -651,6 +659,7 @@ var Data = (function () {
     onChange: function (fn) { listeners.push(fn); },
     setApps: function (apps) { installed = apps; },
     appFor: appFor,
+    stremio: stremio,
     usable: usable,
     services: services,
     refresh: function () { refreshWeather(); refreshPrices(); refreshRecs(); },

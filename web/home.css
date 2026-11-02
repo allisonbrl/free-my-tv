@@ -242,7 +242,7 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
   -webkit-transition: opacity 0.3s;
   transition: opacity 0.3s;
 }
-.card.wide .back { opacity: 1; }
+.card.wide .back.ready { opacity: 1; }
 .card .img::after {
   content: '';
   position: absolute;

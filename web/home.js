@@ -460,13 +460,38 @@
       n.style.width = w + 'px';
       setClass(n, 'wide', wide);
       setClass(n, 'edge', at < 0 || at > 1740);
-      if (wide && !n.getAttribute('data-back') && cards[i]) {
-        n.setAttribute('data-back', '1');
-        n.querySelector('.back').style.backgroundImage = 'url(' + Data.image(cards[i].backdrop, 'w1280') + ')';
-      }
+      if (wide) loadBack(i);
       left += w + 40;
     }
+    // The neighbours' photos load ahead, so the next card fades its own in at once instead of after a download.
+    preloadBack(st.card + 1);
+    preloadBack(st.card - 1);
     holder.style.webkitTransform = holder.style.transform = 'translateX(' + (-scroll) + 'px)';
+  }
+
+  var backs = {};   // backdrop URL → its Image, loading or loaded
+
+  function preloadBack(i, done) {
+    if (!cards[i] || !cards[i].backdrop) return;
+    var url = Data.image(cards[i].backdrop, 'w1280'), img = backs[url];
+    if (!img) {
+      img = backs[url] = new Image();
+      img.onload = function () { img.ready = true; if (img.then) img.then(); };
+      img.src = url;
+    }
+    if (done) { if (img.ready) done(url); else img.then = function () { done(url); }; }
+  }
+
+  /** The wide card's photo fades in only once it has loaded: before, it faded in empty and then popped in. */
+  function loadBack(i) {
+    var n = $('cards').children[i];
+    if (!n || n.getAttribute('data-back')) return;
+    n.setAttribute('data-back', '1');
+    preloadBack(i, function (url) {
+      var back = n.querySelector('.back');
+      back.style.backgroundImage = 'url(' + url + ')';
+      setClass(back, 'ready', true);
+    });
   }
 
   var bgUrl = null, bgFront = 'bgA';
@@ -1256,7 +1281,8 @@
   function pickTarget(p) {
     if (!p) return null;
     var via = Prefs.openPicks() === 'nuvio' ? nuvio() : null;
-    var app = via || Data.appFor(p.app);
+    // open_in_stremio: Stremio opens the pick whatever service has it (its Tizen app ignores links to a title).
+    var app = via || Data.stremio() || Data.appFor(p.app);
     if (!app) return null;
     // Nuvio's own link for the title, as on Android (nuvio://tmdb/movie/603); webOS apps get links as contentTarget.
     return {app: app, params: via ? {contentTarget: 'nuvio://tmdb/' + (p.kind === 'tv' ? 'series' : 'movie') + '/' + p.id} : null};
